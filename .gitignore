@@ -16,3 +16,5 @@ file/
 .secret
 script/
 contracts/test
+document
+design

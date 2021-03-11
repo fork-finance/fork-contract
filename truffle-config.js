@@ -48,14 +48,14 @@ module.exports = {
      network_id: "5777",       // Any network (default: none)
     },
 
-    bsctestnet: {
+    testnet: {
       provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`),
       network_id: 97,
       confirmations: 10,
       timeoutBlocks: 200,
       skipDryRun: true
     },
-    bscmainnet: {
+    mainnet: {
       provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
       network_id: 56,
       confirmations: 10,
@@ -76,17 +76,6 @@ module.exports = {
       timeoutBlocks: 200,
       skipDryRun: true
     },
-
-    hecotestnet: {
-      // provider: () => new HDWalletProvider(mnemonic, 'https://http-testnet.hecochain.com'),
-      provider: () => new HDWalletProvider(mnemonic, 'wss://ws-testnet.hecochain.com'),
-      network_id: 256,
-    },
-    hecomainnet: {
-      // provider: () => new HDWalletProvider(mnemonic, 'https://http-mainnet.hecochain.com'),
-      provider: () => new HDWalletProvider(mnemonic, 'wss://ws-mainnet-node.huobichain.com'),
-      network_id: 128
-    }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
     // You should run a client (like ganache-cli, geth or parity) in a separate terminal
@@ -133,7 +122,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.6.8",    // Fetch exact version from solc-bin (default: truffle's version)
+      version: "0.6.6",    // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       // settings: {          // See the solidity docs for advice about optimization and evmVersion
       //  optimizer: {
