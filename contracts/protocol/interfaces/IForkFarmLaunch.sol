@@ -69,4 +69,8 @@ interface IForkFarmLaunch {
   function withdrawAll(address _for, uint256 _pid) external;
 
   function harvest(uint256 _pid) external;
+
+  function depositCheckToCashPool(address _for, uint256 _pid, uint256 _amount) external;
+
+  function cashCheck(uint256 _pid) external;
 }

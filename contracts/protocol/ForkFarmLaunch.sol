@@ -9,6 +9,7 @@ import "./interfaces/IForkFarmLaunch.sol";
 contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
+  using SafeERC20 for CheckToken;
 
   // Info of each user.
   struct UserInfo {
@@ -112,16 +113,18 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
   event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
   event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+  event DepositCheckToCashPool(address indexed user, uint256 indexed pid, uint256 amount);
+  event CashedCheck(address indexed user, uint256 indexed pid, uint256 amount, uint256 pending);
 
   constructor(
-    CheckToken _check,
+    address _check,
     address _devaddr,
     uint256 _checkPerBlock
     // uint256 _startBlock,
     // uint256 _bonusLockupBps,
     // uint256 _bonusEndBlock
   ) public {
-    check = _check;
+    check = CheckToken(_check);
     devaddr = _devaddr;
     checkPerBlock = _checkPerBlock;
     // bonusLockUpBps = _bonusLockupBps;
@@ -469,5 +472,30 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
       check.transfer(_to, _amount);
     }
   }
+
+  // Deposit CHECK-TOKEN to CashPool for FPT allocation.
+  function depositCheckToCashPool(address _for, uint256 _pid, uint256 _amount) public override {
+    CashPoolInfo storage pool = cashPoolInfo[_pid];
+    CashUserInfo storage user = cashUserInfo[_pid][_for];
+    require(block.number >= pool.startBlock && block.number < pool.endBlock, "The cash-out activity did not start");
+    check.safeTransferFrom(address(msg.sender), address(this), _amount);
+    user.amount = user.amount.add(_amount);
+    pool.stakeTotal = pool.stakeTotal.add(_amount);
+    emit DepositCheckToCashPool(msg.sender, _pid, _amount);
+  }
+
+  function cashCheck(uint256 _pid) public override {
+    CashPoolInfo storage pool = cashPoolInfo[_pid];
+    CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
+    require(block.number >= pool.startBlock && block.number < pool.endBlock, "The cash-out activity did not start");
+    require(user.amount > 0, "nothing to cash");
+    uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
+    IERC20 cashToken = IERC20(pool.cashToken);
+    require(pending <= cashToken.balanceOf(address(this)), "wtf not enough cashToken");
+    require(user.amount <= check.balanceOf(address(this)), "wtf not enough check-token to burn");
+    check.burn(address(this), user.amount);
+    cashToken.safeTransfer(address(msg.sender), pending);
+    emit CashedCheck(msg.sender, _pid, user.amount, pending);
+  } 
 
 }
