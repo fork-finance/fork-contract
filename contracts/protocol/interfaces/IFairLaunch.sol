@@ -19,11 +19,11 @@ interface IFairLaunch {
 
   function updatePool(uint256 _pid) external;
 
-  function deposit(address _for, uint256 _pid, uint256 _amount) external;
+  function deposit(uint256 _pid, uint256 _amount) external;
 
-  function withdraw(address _for, uint256 _pid, uint256 _amount) external;
+  function withdraw(uint256 _pid, uint256 _amount) external;
 
-  function withdrawAll(address _for, uint256 _pid) external;
+  function withdrawAll(uint256 _pid) external;
 
   function harvest(uint256 _pid) external;
 }

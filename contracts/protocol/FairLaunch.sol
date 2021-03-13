@@ -15,7 +15,6 @@ contract FairLaunch is IFairLaunch, Ownable {
     uint256 amount; // How many Staking tokens the user has provided.
     uint256 rewardDebt; // Reward debt. See explanation below.
     uint256 bonusDebt; // Last block that user exec something to the pool.
-    address fundedBy; // Funded by who?
     //
     // We do some fancy math here. Basically, any point in time, the amount of ALPACAs
     // entitled to a user but is pending to be distributed is:
@@ -241,14 +240,13 @@ contract FairLaunch is IFairLaunch, Ownable {
   }
 
   // Deposit Staking tokens to FairLaunchToken for ALPACA allocation.
-  function deposit(address _for, uint256 _pid, uint256 _amount) public override {
+  function deposit(uint256 _pid, uint256 _amount) public override {
+    require(_pid < poolInfo.length, 'pool is not existed');
     PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][_for];
-    if (user.fundedBy != address(0)) require(user.fundedBy == msg.sender, "bad sof");
+    UserInfo storage user = userInfo[_pid][msg.sender];
     require(pool.stakeToken != address(0), "deposit: not accept deposit");
     updatePool(_pid);
-    if (user.amount > 0) _harvest(_for, _pid);
-    if (user.fundedBy == address(0)) user.fundedBy = msg.sender;
+    if (user.amount > 0) _harvest(_pid);
     IERC20(pool.stakeToken).safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
@@ -257,21 +255,20 @@ contract FairLaunch is IFairLaunch, Ownable {
   }
 
   // Withdraw Staking tokens from FairLaunchToken.
-  function withdraw(address _for, uint256 _pid, uint256 _amount) public override {
-    _withdraw(_for, _pid, _amount);
+  function withdraw(uint256 _pid, uint256 _amount) public override {
+    _withdraw(_pid, _amount);
   }
 
-  function withdrawAll(address _for, uint256 _pid) public override {
-    _withdraw(_for, _pid, userInfo[_pid][_for].amount);
+  function withdrawAll(uint256 _pid) public override {
+    _withdraw(_pid, userInfo[_pid][msg.sender].amount);
   }
 
-  function _withdraw(address _for, uint256 _pid, uint256 _amount) internal {
+  function _withdraw(uint256 _pid, uint256 _amount) internal {
     PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][_for];
-    require(user.fundedBy == msg.sender, "only funder");
+    UserInfo storage user = userInfo[_pid][msg.sender];
     require(user.amount >= _amount, "withdraw: not good");
     updatePool(_pid);
-    _harvest(_for, _pid);
+    _harvest(_pid);
     user.amount = user.amount.sub(_amount);
     user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
     user.bonusDebt = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12);
@@ -286,12 +283,13 @@ contract FairLaunch is IFairLaunch, Ownable {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
     updatePool(_pid);
-    _harvest(msg.sender, _pid);
+    _harvest(_pid);
     user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
     user.bonusDebt = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12);
   }
 
-  function _harvest(address _to, uint256 _pid) internal {
+  function _harvest(uint256 _pid) internal {
+    address _to = msg.sender;
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][_to];
     require(user.amount > 0, "nothing to harvest");
