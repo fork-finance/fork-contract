@@ -23,8 +23,15 @@ const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
 // const mnemonic = fs.readFileSync("../demo/.secret").toString().trim();
 const mnemonic = fs.readFileSync("./.secret").toString().trim();
+const {BSCSCANAPIKEY} = require('./env.json');
 
 module.exports = {
+   plugins: [
+    'truffle-plugin-verify'
+  ],
+  api_keys: {
+    bscscan: BSCSCANAPIKEY
+  },
   /**
    * Networks define how you connect to your ethereum client and let you set the
    * defaults web3 uses to send transactions. If you don't specify one truffle
@@ -37,9 +44,11 @@ module.exports = {
 
   networks: {
     development: {
-     host: "127.0.0.1",     // Localhost (default: none)
-     port: 8545,            // Standard Ethereum port (default: none)
-     network_id: "*",       // Any network (default: none)
+      host: '127.0.0.1', // Localhost (default: none)
+      port: 8545, // Standard Ethereum port (default: none)
+      network_id: '57777',
+      gasPrice: 50000000000,
+      gas: 6721975,
     },
 
     ganache: {

@@ -2,17 +2,19 @@
   "name": "@fork-finance/fork-contract",
   "version": "1.0.0",
   "devDependencies": {
-    "@openzeppelin/truffle-upgrades": "^1.5.0",
-    "@truffle/contract": "^4.3.9",
-    "@truffle/artifactor": "^4.0.84",
-    "@truffle/hdwallet-provider": "^1.2.2",
-    "@uniswap/sdk": "^3.0.3",
-    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "@ethersproject/address": "^5.0.0-beta",
     "@ethersproject/contracts": "^5.0.0-beta",
     "@ethersproject/networks": "^5.0.0-beta",
     "@ethersproject/providers": "^5.0.0-beta",
-    "@ethersproject/solidity": "^5.0.0-beta"
+    "@ethersproject/solidity": "^5.0.0-beta",
+    "@openzeppelin/truffle-upgrades": "^1.5.0",
+    "@truffle/artifactor": "^4.0.84",
+    "@truffle/contract": "^4.3.9",
+    "@truffle/hdwallet-provider": "^1.2.2",
+    "@uniswap/sdk": "^3.0.3",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "truffle-assertions": "^0.9.1",
+    "truffle-plugin-verify": "^0.5.6"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.4.0",

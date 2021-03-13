@@ -18,3 +18,4 @@ script/
 contracts/test
 document
 design
+env.json
