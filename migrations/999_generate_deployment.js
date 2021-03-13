@@ -74,7 +74,6 @@ const getFairLaunchPools = async (fairLaunch) => {
     let poolInfo = await fairLaunch.poolInfo(pid);
     let token = await ERC20.at(poolInfo.stakeToken);
     let stakeToken = await token.symbol();
-    console.log('allocPoint', poolInfo.allocPoint.toString())
     pools.push({
       id: pid,
       stakingToken: stakeToken,
