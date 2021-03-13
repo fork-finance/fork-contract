@@ -9,6 +9,9 @@ const iBNB = artifacts.require('iBNB');
 const iBUSD = artifacts.require('iBUSD');
 const MockWBNB = artifacts.require('MockWBNB');
 const MockDai = artifacts.require('MockDai');
+const IWBNB = artifacts.require('IWETH');
+
+const WNativeRelayer = artifacts.require('WNativeRelayer');
 
 // ============ Main Migration ============
 
@@ -35,6 +38,15 @@ async function deployToken(deployer, network, accounts) {
   const dai = network === 'mainnet' ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
   const wbnb = network === 'mainnet' ? await IWBNB.at(knownContracts.WBNB[network]) : await MockWBNB.deployed();
 
-  await deployer.deploy(iBNB, wbnb.address);
+  await deployer.deploy(WNativeRelayer, wbnb.address);
+
+  wNativeRelayer = await WNativeRelayer.deployed();
+
+  await deployer.deploy(iBNB, wbnb.address, wNativeRelayer.address);
   await deployer.deploy(iBUSD, dai.address);
+
+  ibnb = await iBNB.deployed();
+
+  // set whitelistedCallers
+  await wNativeRelayer.setCallerOk([ibnb.address], true);
 }
