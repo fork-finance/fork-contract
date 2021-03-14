@@ -8,10 +8,10 @@ const InitialArtifacts = {
 };
 
 module.exports = async function (deployer) {
-  for await ([contractName, legacyArtifact] of Object.entries(InitialArtifacts)) {
-    await artifactor.save({
-      contractName,
-      ...legacyArtifact,
-    });
-  }
+  // for await ([contractName, legacyArtifact] of Object.entries(InitialArtifacts)) {
+  //   await artifactor.save({
+  //     contractName,
+  //     ...legacyArtifact,
+  //   });
+  // }
 }
