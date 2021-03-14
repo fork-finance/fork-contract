@@ -13,6 +13,8 @@ const IWBNB = artifacts.require('IWETH');
 
 const WNativeRelayer = artifacts.require('WNativeRelayer');
 
+const conf = require("./conf");
+
 // ============ Main Migration ============
 
 const migration = async (deployer, network, accounts) => {
@@ -24,8 +26,8 @@ module.exports = migration
 // ============ Deploy Functions ============
 
 async function deployToken(deployer, network, accounts) {
-  const startReleaseBlock = 6499649;
-  const endReleaseBlock = 6699649;
+  const startReleaseBlock = conf.startReleaseBlock[network];
+  const endReleaseBlock = conf.endReleaseBlock[network];
 
   await deployer.deploy(ForkToken, startReleaseBlock, endReleaseBlock);
   await deployer.deploy(CheckToken);

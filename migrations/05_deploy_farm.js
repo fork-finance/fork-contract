@@ -8,15 +8,17 @@ const MockDai = artifacts.require('MockDai');
 const FairLaunch = artifacts.require("FairLaunch");
 const ForkFarmLaunch = artifacts.require("ForkFarmLaunch");
 
+const conf = require("./conf");
+
 // const {ALPACA_REWARD_PER_BLOCK, START_BLOCK} = require('./pool');
 
 module.exports = async (deployer, network, accounts) => {
-  const FORK_REWARD_PER_BLOCK = web3.utils.toWei('20', 'ether');
-  const CHECK_REWARD_PER_BLOCK = web3.utils.toWei('20', 'ether');
-  const BONUS_MULTIPLIER = 7;
-  const BONUS_END_BLOCK = '5661200';
-  const BONUS_LOCK_BPS = '7000';
-  const START_BLOCK = '5258000';
+  const FORK_REWARD_PER_BLOCK = web3.utils.toWei(conf.FORK_REWARD_PER_BLOCK_ETHER[network], 'ether');
+  const CHECK_REWARD_PER_BLOCK = web3.utils.toWei(conf.CHECK_REWARD_PER_BLOCK_ETHER[network], 'ether');
+  const BONUS_MULTIPLIER = conf.BONUS_MULTIPLIER[network];
+  const BONUS_END_BLOCK = conf.BONUS_END_BLOCK[network];
+  const BONUS_LOCK_BPS = conf.BONUS_LOCK_BPS[network];
+  const START_BLOCK = conf.START_BLOCK[network];
 
   const forkToken = await ForkToken.deployed();
   const checkToken= await CheckToken.deployed();
