@@ -34,7 +34,6 @@ async function deployToken(deployer, network, accounts) {
 
   if (network !== 'mainnet') {
     await deployer.deploy(MockDai);
-    await deployer.deploy(MockWBNB);
   }
 
   const dai = network === 'mainnet' ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
