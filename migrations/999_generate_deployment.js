@@ -17,6 +17,8 @@ const IWBNB = artifacts.require('IWETH');
 
 const FairLaunch = artifacts.require("FairLaunch");
 const ForkFarmLaunch = artifacts.require("ForkFarmLaunch");
+const IFairLaunch = artifacts.require("IFairLaunch");
+const IForkFarmLaunch = artifacts.require("IForkFarmLaunch");
 
 const UniswapV2Factory = artifacts.require('UniswapV2Factory');
 const UniswapV2Router02 = artifacts.require('UniswapV2Router02');
@@ -63,6 +65,16 @@ module.exports = async (deployer, network, accounts) => {
   await writeFile(deploymentPath, JSON.stringify(deployments, null, 2));
 
   console.log(`Exported deployments into ${deploymentPath}`);
+
+  let contracts = [iBNB, iBUSD, CheckToken, ForkToken, IERC20, IFairLaunch, IForkFarmLaunch, MockDai, MockWBNB, UniswapV2Factory, UniswapV2Router02];
+
+  const abiPath = path.resolve(__dirname, `../build/abis/${network}`);
+  
+  for (let c of contracts) {
+    let abiFile = `${abiPath}/${c.contractName}.json`;
+    await writeFile(abiFile, JSON.stringify(c.abi, null, 2));
+    console.log(`Exported ${c.contractName}‘s abi into ${abiFile}`);
+  }
 
 }
 
