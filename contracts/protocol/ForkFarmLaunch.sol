@@ -367,22 +367,16 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
       return;
     }
     uint256 multiplier = getMultiplier(pool.projectId, pool.lastRewardBlock, block.number);
-    // uint256 totalAllocPoint = project.totalAllocPoint;
-    // uint256 bonusEndBlock = project.bonusEndBlock;
-    // uint256 bonusMultiplier = project.bonusMultiplier;
-    // uint256 bonusLockUpBps = project.bonusLockUpBps;
     uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
     check.mint(devaddr, checkReward.div(10));
     check.mint(address(this), checkReward);
     pool.accAlpacaPerShare = pool.accAlpacaPerShare.add(checkReward.mul(1e12).div(lpSupply));
     // update accAlpacaPerShareTilBonusEnd
     if (block.number <= project.bonusEndBlock) {
-      // check.lockWithProject(pool.projectId, devaddr, checkReward.div(10).mul(bonusLockUpBps).div(10000));
       pool.accAlpacaPerShareTilBonusEnd = pool.accAlpacaPerShare;
     }
     if(block.number > project.bonusEndBlock && pool.lastRewardBlock < project.bonusEndBlock) {
       uint256 checkBonusPortion = project.bonusEndBlock.sub(pool.lastRewardBlock).mul(project.bonusMultiplier).mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
-      // check.lockWithProject(pool.projectId, devaddr, checkBonusPortion.div(10).mul(bonusLockUpBps).div(10000));
       pool.accAlpacaPerShareTilBonusEnd = pool.accAlpacaPerShareTilBonusEnd.add(checkBonusPortion.mul(1e12).div(lpSupply));
     }
     pool.lastRewardBlock = block.number;
