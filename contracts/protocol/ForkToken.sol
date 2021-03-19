@@ -4,14 +4,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// AlpacaToken with Governance.
+// ForkToken with Governance.
 contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
-  uint256 private _cap = 188000000e18;
+  uint256 private _cap = 18800000e18;
   uint256 private _totalLock;
 
   uint256 public startReleaseBlock;
   uint256 public endReleaseBlock;
-  uint256 public manualMintLimit = 8000000e18;
+  uint256 public manualMintLimit = 800000e18;
   uint256 public manualMinted = 0;
 
   mapping(address => uint256) private _locks;
@@ -25,8 +25,8 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     startReleaseBlock = _startReleaseBlock;
     endReleaseBlock = _endReleaseBlock;
 
-    // maunalMint 250k for seeding liquidity
-    manualMint(msg.sender, 250000e18);
+    // maunalMint 25k for seeding liquidity
+    manualMint(msg.sender, 25000e18);
   }
 
   function setReleaseBlock(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public onlyOwner {
@@ -91,16 +91,16 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
   }
 
   function canUnlockAmount(address _account) public view returns (uint256) {
-    // When block number less than startReleaseBlock, no ALPACAs can be unlocked
+    // When block number less than startReleaseBlock, no FORKs can be unlocked
     if (block.number < startReleaseBlock) {
       return 0;
     }
-    // When block number more than endReleaseBlock, all locked ALPACAs can be unlocked
+    // When block number more than endReleaseBlock, all locked FORKs can be unlocked
     else if (block.number >= endReleaseBlock) {
       return _locks[_account];
     }
     // When block number is more than startReleaseBlock but less than endReleaseBlock,
-    // some ALPACAs can be released
+    // some FORKs can be released
     else
     {
       uint256 releasedBlock = block.number.sub(_lastUnlockBlock[_account]);
@@ -110,7 +110,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
   }
 
   function unlock() public {
-    require(_locks[msg.sender] > 0, "no locked ALPACAs");
+    require(_locks[msg.sender] > 0, "no locked FORKs");
 
     uint256 amount = canUnlockAmount(msg.sender);
 
@@ -120,7 +120,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     _totalLock = _totalLock.sub(amount);
   }
 
-  // @dev move ALPACAs with its locked funds to another account
+  // @dev move FORKs with its locked funds to another account
   function transferAll(address _to) public {
     _locks[_to] = _locks[_to].add(_locks[msg.sender]);
 
@@ -220,9 +220,9 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
     address signatory = ecrecover(digest, v, r, s);
-    require(signatory != address(0), "ALPACA::delegateBySig: invalid signature");
-    require(nonce == nonces[signatory]++, "ALPACA::delegateBySig: invalid nonce");
-    require(now <= expiry, "ALPACA::delegateBySig: signature expired");
+    require(signatory != address(0), "FORK::delegateBySig: invalid signature");
+    require(nonce == nonces[signatory]++, "FORK::delegateBySig: invalid nonce");
+    require(now <= expiry, "FORK::delegateBySig: signature expired");
     return _delegate(signatory, delegatee);
   }
 
@@ -244,7 +244,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     * @return The number of votes the account had as of the given block
     */
   function getPriorVotes(address account, uint256 blockNumber) external view returns (uint256) {
-    require(blockNumber < block.number, "ALPACA::getPriorVotes: not yet determined");
+    require(blockNumber < block.number, "FORK::getPriorVotes: not yet determined");
 
     uint32 nCheckpoints = numCheckpoints[account];
     if (nCheckpoints == 0) {
@@ -279,7 +279,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
 
   function _delegate(address delegator, address delegatee) internal {
     address currentDelegate = _delegates[delegator];
-    uint256 delegatorBalance = balanceOf(delegator); // balance of underlying ALPACAs (not scaled);
+    uint256 delegatorBalance = balanceOf(delegator); // balance of underlying FORKs (not scaled);
     _delegates[delegator] = delegatee;
 
     emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -317,7 +317,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     uint256 oldVotes,
     uint256 newVotes
   ) internal {
-    uint32 blockNumber = safe32(block.number, "ALPACA::_writeCheckpoint: block number exceeds 32 bits");
+    uint32 blockNumber = safe32(block.number, "FORK::_writeCheckpoint: block number exceeds 32 bits");
 
     if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
       checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
