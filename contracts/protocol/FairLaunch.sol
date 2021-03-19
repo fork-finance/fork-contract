@@ -296,7 +296,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     uint256 pending = user.amount.mul(pool.accForkPerShare).div(1e12).sub(user.rewardDebt);
     require(pending <= fork.balanceOf(address(this)), "wtf not enough fork");
     uint256 bonus = user.amount.mul(pool.accForkPerShareTilBonusEnd).div(1e12).sub(user.bonusDebt);
-    safeForkTransfer(_to, pending);
+    _safeForkTransfer(_to, pending);
     fork.lock(_to, bonus.mul(bonusLockUpBps).div(10000));
   }
 
@@ -311,7 +311,7 @@ contract FairLaunch is IFairLaunch, Ownable {
   }
 
     // Safe fork transfer function, just in case if rounding error causes pool to not have enough FORKs.
-  function safeForkTransfer(address _to, uint256 _amount) internal {
+  function _safeForkTransfer(address _to, uint256 _amount) internal {
     uint256 forkBal = fork.balanceOf(address(this));
     if (_amount > forkBal) {
       fork.transfer(_to, forkBal);

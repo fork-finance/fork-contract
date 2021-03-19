@@ -120,26 +120,15 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     address _check,
     address _devaddr,
     uint256 _checkPerBlock
-    // uint256 _startBlock,
-    // uint256 _bonusLockupBps,
-    // uint256 _bonusEndBlock
   ) public {
     check = CheckToken(_check);
     devaddr = _devaddr;
     checkPerBlock = _checkPerBlock;
-    // bonusLockUpBps = _bonusLockupBps;
-    // bonusEndBlock = _bonusEndBlock;
-    // startBlock = _startBlock;
   }
 
-  /*
-  ██████╗░░█████╗░██████╗░░█████╗░███╗░░░███╗  ░██████╗███████╗████████╗████████╗███████╗██████╗░
-  ██╔══██╗██╔══██╗██╔══██╗██╔══██╗████╗░████║  ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
-  ██████╔╝███████║██████╔╝███████║██╔████╔██║  ╚█████╗░█████╗░░░░░██║░░░░░░██║░░░█████╗░░██████╔╝
-  ██╔═══╝░██╔══██║██╔══██╗██╔══██║██║╚██╔╝██║  ░╚═══██╗██╔══╝░░░░░██║░░░░░░██║░░░██╔══╝░░██╔══██╗
-  ██║░░░░░██║░░██║██║░░██║██║░░██║██║░╚═╝░██║  ██████╔╝███████╗░░░██║░░░░░░██║░░░███████╗██║░░██║
-  ╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░░░░╚═╝  ╚═════╝░╚══════╝░░░╚═╝░░░░░░╚═╝░░░╚══════╝╚═╝░░╚═╝
-  */
+  /**
+   * setting
+   */
 
   // Update dev address by the previous dev.
   function setDev(address _devaddr) public {
@@ -288,14 +277,9 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     cashPoolInfo[_pid].endBlock = _endBlock;
   }
 
-  /*
-  ░██╗░░░░░░░██╗░█████╗░██████╗░██╗░░██╗
-  ░██║░░██╗░░██║██╔══██╗██╔══██╗██║░██╔╝
-  ░╚██╗████╗██╔╝██║░░██║██████╔╝█████═╝░
-  ░░████╔═████║░██║░░██║██╔══██╗██╔═██╗░
-  ░░╚██╔╝░╚██╔╝░╚█████╔╝██║░░██║██║░╚██╗
-  ░░░╚═╝░░░╚═╝░░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝
-  */
+  /**
+   * core
+   */
 
   function isDuplicatedPool(uint256 _projectId, address _stakeToken) public view returns (bool) {
     uint256 length = poolInfo.length;
@@ -438,13 +422,10 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   function _harvest(address _to, uint256 _pid) internal {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][_to];
-    // uint256 bonusLockUpBps = projectInfo[pool.projectId].bonusLockUpBps;
     require(user.amount > 0, "nothing to harvest");
     uint256 pending = user.amount.mul(pool.accAlpacaPerShare).div(1e12).sub(user.rewardDebt);
     require(pending <= check.balanceOf(address(this)), "wtf not enough check");
-    // uint256 bonus = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12).sub(user.bonusDebt);
-    safeAlpacaTransfer(_to, pending);
-    // check.lockWithProject(pool.projectId, _to, bonus.mul(bonusLockUpBps).div(10000));
+    _safeAlpacaTransfer(_to, pending);
   }
 
   // Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -458,7 +439,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   }
 
     // Safe check transfer function, just in case if rounding error causes pool to not have enough CHECKs.
-  function safeAlpacaTransfer(address _to, uint256 _amount) internal {
+  function _safeAlpacaTransfer(address _to, uint256 _amount) internal {
     uint256 checkBal = check.balanceOf(address(this));
     if (_amount > checkBal) {
       check.transfer(_to, checkBal);

@@ -15,7 +15,7 @@ interface IFairLaunch {
     bool _withUpdate
   ) external;
 
-  function pendingAlpaca(uint256 _pid, address _user) external view returns (uint256);
+  function pendingFork(uint256 _pid, address _user) external view returns (uint256);
 
   function updatePool(uint256 _pid) external;
 
