@@ -30,7 +30,6 @@ contract CheckToken is ERC20("CheckToken", "CHECK"), Ownable {
     _burn(_account, _amount);
   }
 
-  // @dev move ALPACAs with its locked funds to another account
   function transferAll(address _to) public {
     _transfer(msg.sender, _to, balanceOf(msg.sender));
   }

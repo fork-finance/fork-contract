@@ -8,7 +8,7 @@ module.exports = async (deployer, network, accounts) => {
         const wbnb = await MockWBNB.deployed();
 
         console.log('Deploying pancakeswap on '+network+' network.');
-       await deployer.deploy(UniswapV2Factory, accounts[0]);
+        await deployer.deploy(UniswapV2Factory, accounts[0]);
         const uniswapFactory = await UniswapV2Factory.deployed();
         await deployer.deploy(UniswapV2Router02, uniswapFactory.address, wbnb.address);
     }
