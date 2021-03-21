@@ -15,10 +15,3 @@ module.exports = async (deployer, network, accounts) => {
         await contract.transferOwnership(Timelock.address);
     }
 };
-
-// tokens
-// farms
-// add lp
-// add pool
-// add project
-// 权限转移到timelock
