@@ -1,7 +1,5 @@
 const ForkToken = artifacts.require('ForkToken');
 const CheckToken = artifacts.require('CheckToken');
-const iBNB = artifacts.require('iBNB');
-const iBUSD = artifacts.require('iBUSD');
 const MockWBNB = artifacts.require('MockWBNB');
 const MockDai = artifacts.require('MockDai');
 
@@ -22,8 +20,6 @@ module.exports = async (deployer, network, accounts) => {
 
   const forkToken = await ForkToken.deployed();
   const checkToken= await CheckToken.deployed();
-  const ibnb = await iBNB.deployed();
-  const ibusd = await iBUSD.deployed();
 
   console.log(">> 1. Deploying FairLaunch");
   await deployer.deploy(FairLaunch, forkToken.address, accounts[0], FORK_REWARD_PER_BLOCK, START_BLOCK, 0, 0);

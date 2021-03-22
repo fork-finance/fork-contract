@@ -24,26 +24,32 @@ module.exports = async (deployer, network, accounts) => {
   const dai = network === 'mainnet' ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
   const wbnb = network === 'mainnet' ? await IWBNB.at(knownContracts.WBNB[network]) : await MockWBNB.deployed();
 
-  let check_pair = await uniswapFactory.getPair(ForkToken.address, wbnb.address);
-  if (!web3.utils.hexToString(check_pair)) {
+  let fork_wbnb_pair, fork_busd_pair;
+  fork_wbnb_pair = await uniswapFactory.getPair(ForkToken.address, wbnb.address);
+  if (!web3.utils.hexToString(fork_wbnb_pair)) {
     await uniswapFactory.createPair(ForkToken.address, wbnb.address);
-    check_pair = await uniswapFactory.getPair(ForkToken.address, wbnb.address);
+    fork_wbnb_pair = await uniswapFactory.getPair(ForkToken.address, wbnb.address);
   }
-  const fork_wbnb_pair = check_pair;
+
+  fork_busd_pair = await uniswapFactory.getPair(ForkToken.address, dai.address);
+  if (!web3.utils.hexToString(fork_busd_pair)) {
+    await uniswapFactory.createPair(ForkToken.address, dai.address);
+    fork_busd_pair = await uniswapFactory.getPair(ForkToken.address, dai.address);
+  }
 
   const fairLaunch = await FairLaunch.deployed();
   const fork_pools = [{
-    alloc_point: '300',
+    alloc_point: '100',
     staking_token_addr: fork_wbnb_pair,
     staking_token_name: 'FORK-WBNB-LP'
   },{
     alloc_point: '100',
-    staking_token_addr: iBNB.address,
-    staking_token_name: 'iBNB'
+    staking_token_addr: fork_busd_pair,
+    staking_token_name: 'FORK-BUSD-LP'
   },{
     alloc_point: '100',
-    staking_token_addr: iBUSD.address,
-    staking_token_name: 'iBUSD'
+    staking_token_addr: ForkToken.address,
+    staking_token_name: 'FORK'
   }];
   for (let i in fork_pools) {
     let p = fork_pools[i];
