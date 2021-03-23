@@ -1,6 +1,7 @@
 const truffleAssert = require('truffle-assertions');
 
 const CheckToken = artifacts.require('CheckToken');
+const ForkToken = artifacts.require('ForkToken');
 const MockERC20 = artifacts.require('MockERC20');
 const ForkFarmLaunch = artifacts.require("ForkFarmLaunch");
 
@@ -18,14 +19,15 @@ contract('ForkFarmLaunch', async (accounts) => {
     swapRouter = await UniswapV2Router02.deployed();
     swapFactory = await UniswapV2Factory.deployed();
     // tokens
-    checkToken = await CheckToken.new();
+    check = await CheckToken.new();
+    fork = await ForkToken.new();
 
     // users
     [deployer, alice, bob, dev] = accounts;
     // forkFarmLaunch
-    forkFarmLaunch = await ForkFarmLaunch.new(checkToken.address, deployer, CHECK_REWARD_PER_BLOCK);
-    await checkToken.transferOwnership(ForkFarmLaunch.address);
+    forkFarmLaunch = await ForkFarmLaunch.new(check.address, deployer, CHECK_REWARD_PER_BLOCK);
+    await check.transferOwnership(forkFarmLaunch.address);
     // TODO
     
   })
-}
+});
