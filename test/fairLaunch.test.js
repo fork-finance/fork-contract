@@ -126,7 +126,7 @@ contract('FairLaunch', async (accounts) => {
 
     //   // 4. Move 1 Block so there is some pending
     //   await fairLaunch.massUpdatePools({from: deployer});
-    //   assert.equal(etherToWei('5000'), (await fairLaunch.pendingAlpaca(0, bob, {from: bob})).toString());
+    //   assert.equal(etherToWei('5000'), (await fairLaunch.pendingFork(0, bob, {from: bob})).toString());
 
     //   // 5. Harvest all yield
     //   await fairLaunch.harvest(0, {from: bob});
@@ -154,8 +154,8 @@ contract('FairLaunch', async (accounts) => {
       // 5. Move 1 Block so there is some pending
       await fairLaunch.massUpdatePools({from: deployer});
 
-      assert.equal(etherToWei('7500'), (await fairLaunch.pendingAlpaca(0, alice, {from: alice})).toString());
-      assert.equal(etherToWei('2500'), (await fairLaunch.pendingAlpaca(1, alice, {from: alice})).toString());
+      assert.equal(etherToWei('7500'), (await fairLaunch.pendingFork(0, alice, {from: alice})).toString());
+      assert.equal(etherToWei('2500'), (await fairLaunch.pendingFork(1, alice, {from: alice})).toString());
 
       // 6. Harvest all yield
       await fairLaunch.harvest(0, {from: alice});
