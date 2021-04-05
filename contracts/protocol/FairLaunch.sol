@@ -35,6 +35,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     uint256 lastRewardBlock; // Last block number that FORKs distribution occurs.
     uint256 accForkPerShare; // Accumulated FORKs per share, times 1e12. See below.
     uint256 accForkPerShareTilBonusEnd; // Accumated FORKs per share until Bonus End.
+    uint256 totalStakeToken;
   }
 
   // The Fork TOKEN!
@@ -81,14 +82,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     startBlock = _startBlock;
   }
 
-  /*
-  ██████╗░░█████╗░██████╗░░█████╗░███╗░░░███╗  ░██████╗███████╗████████╗████████╗███████╗██████╗░
-  ██╔══██╗██╔══██╗██╔══██╗██╔══██╗████╗░████║  ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
-  ██████╔╝███████║██████╔╝███████║██╔████╔██║  ╚█████╗░█████╗░░░░░██║░░░░░░██║░░░█████╗░░██████╔╝
-  ██╔═══╝░██╔══██║██╔══██╗██╔══██║██║╚██╔╝██║  ░╚═══██╗██╔══╝░░░░░██║░░░░░░██║░░░██╔══╝░░██╔══██╗
-  ██║░░░░░██║░░██║██║░░██║██║░░██║██║░╚═╝░██║  ██████╔╝███████╗░░░██║░░░░░░██║░░░███████╗██║░░██║
-  ╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░░░░╚═╝  ╚═════╝░╚══════╝░░░╚═╝░░░░░░╚═╝░░░╚══════╝╚═╝░░╚═╝
-  */
+  // setting
 
   // Update dev address by the previous dev.
   function setDev(address _devaddr) public {
@@ -133,7 +127,8 @@ contract FairLaunch is IFairLaunch, Ownable {
         allocPoint: _allocPoint,
         lastRewardBlock: lastRewardBlock,
         accForkPerShare: 0,
-        accForkPerShareTilBonusEnd: 0
+        accForkPerShareTilBonusEnd: 0,
+        totalStakeToken: 0
       })
     );
   }
@@ -151,14 +146,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     poolInfo[_pid].allocPoint = _allocPoint;
   }
 
-  /*
-  ░██╗░░░░░░░██╗░█████╗░██████╗░██╗░░██╗
-  ░██║░░██╗░░██║██╔══██╗██╔══██╗██║░██╔╝
-  ░╚██╗████╗██╔╝██║░░██║██████╔╝█████═╝░
-  ░░████╔═████║░██║░░██║██╔══██╗██╔═██╗░
-  ░░╚██╔╝░╚██╔╝░╚█████╔╝██║░░██║██║░╚██╗
-  ░░░╚═╝░░░╚═╝░░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝
-  */
+  // farming
 
   function isDuplicatedPool(address _stakeToken) public view returns (bool) {
     uint256 length = poolInfo.length;
@@ -249,6 +237,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     if (user.amount > 0) _harvest(_pid);
     IERC20(pool.stakeToken).safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
+    pool.totalStakeToken = pool.totalStakeToken.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accForkPerShare).div(1e12);
     user.bonusDebt = user.amount.mul(pool.accForkPerShareTilBonusEnd).div(1e12);
     emit Deposit(msg.sender, _pid, _amount);
@@ -270,6 +259,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     updatePool(_pid);
     _harvest(_pid);
     user.amount = user.amount.sub(_amount);
+    pool.totalStakeToken = pool.totalStakeToken.sub(_amount);
     user.rewardDebt = user.amount.mul(pool.accForkPerShare).div(1e12);
     user.bonusDebt = user.amount.mul(pool.accForkPerShareTilBonusEnd).div(1e12);
     if (pool.stakeToken != address(0)) {

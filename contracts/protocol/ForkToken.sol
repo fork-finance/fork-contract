@@ -24,9 +24,6 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     _setupDecimals(18);
     startReleaseBlock = _startReleaseBlock;
     endReleaseBlock = _endReleaseBlock;
-
-    // maunalMint 25k for seeding liquidity
-    manualMint(msg.sender, 25000e18);
   }
 
   function setReleaseBlock(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public onlyOwner {
