@@ -10,7 +10,7 @@
     "@openzeppelin/truffle-upgrades": "^1.5.0",
     "@truffle/artifactor": "^4.0.84",
     "@truffle/contract": "^4.3.9",
-    "@truffle/hdwallet-provider": "^1.2.2",
+    "@truffle/hdwallet-provider": "1.2.2",
     "@uniswap/sdk": "^3.0.3",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "truffle-assertions": "^0.9.1",
