@@ -7,8 +7,6 @@ const knownContracts = require('./known-contracts');
 
 const ForkToken = artifacts.require('ForkToken');
 const CheckToken = artifacts.require('CheckToken');
-const iBNB = artifacts.require('iBNB');
-const iBUSD = artifacts.require('iBUSD');
 const MockWBNB = artifacts.require('MockWBNB');
 const MockDai = artifacts.require('MockDai');
 const ERC20 = artifacts.require('ERC20');
@@ -55,8 +53,6 @@ module.exports = async (deployer, network, accounts) => {
       BUSD: dai.address,
       FORK: ForkToken.address,
       CHECK: CheckToken.address,
-      iBNB: iBNB.address,
-      iBUSD: iBUSD.address,
     }
   };
 
@@ -66,7 +62,7 @@ module.exports = async (deployer, network, accounts) => {
 
   console.log(`Exported deployments into ${deploymentPath}`);
 
-  let contracts = [iBNB, iBUSD, CheckToken, ForkToken, IERC20, IFairLaunch, IForkFarmLaunch, MockDai, MockWBNB, UniswapV2Factory, UniswapV2Router02];
+  let contracts = [CheckToken, ForkToken, IERC20, IFairLaunch, IForkFarmLaunch, MockDai, MockWBNB, UniswapV2Factory, UniswapV2Router02];
 
   const abiPath = path.resolve(__dirname, `../build/abis/${network}`);
   

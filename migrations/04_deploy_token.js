@@ -28,8 +28,9 @@ module.exports = migration
 async function deployToken(deployer, network, accounts) {
   const startReleaseBlock = conf.startReleaseBlock[network];
   const endReleaseBlock = conf.endReleaseBlock[network];
-
-  await deployer.deploy(ForkToken, startReleaseBlock, endReleaseBlock);
+  if (network == 'develop') {
+    await deployer.deploy(ForkToken, startReleaseBlock, endReleaseBlock);
+  }
   await deployer.deploy(CheckToken);
 
   if (network !== 'mainnet') {

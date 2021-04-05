@@ -7,6 +7,7 @@ const FairLaunch = artifacts.require("FairLaunch");
 const ForkFarmLaunch = artifacts.require("ForkFarmLaunch");
 
 const conf = require("./conf");
+const knownContracts = require('./known-contracts.js');
 
 // const {ALPACA_REWARD_PER_BLOCK, START_BLOCK} = require('./pool');
 
@@ -18,8 +19,10 @@ module.exports = async (deployer, network, accounts) => {
   const BONUS_LOCK_BPS = conf.BONUS_LOCK_BPS[network];
   const START_BLOCK = conf.START_BLOCK[network];
 
-  const forkToken = await ForkToken.deployed();
-  const checkToken= await CheckToken.deployed();
+  // const checkToken= await CheckToken.deployed();
+
+  const forkToken = knownContracts.FORK[network] ? await ForkToken.at(knownContracts.FORK[network]) : await ForkToken.deployed();
+  const checkToken = knownContracts.CHECK[network] ? await CheckToken.at(knownContracts.CHECK[network]) : await CheckToken.deployed();
 
   console.log(">> 1. Deploying FairLaunch");
   await deployer.deploy(FairLaunch, forkToken.address, accounts[0], FORK_REWARD_PER_BLOCK, START_BLOCK, 0, 0);
