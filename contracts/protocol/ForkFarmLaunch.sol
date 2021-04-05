@@ -21,10 +21,10 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     // We do some fancy math here. Basically, any point in time, the amount of CHECKs
     // entitled to a user but is pending to be distributed is:
     //
-    //   pending reward = (user.amount * pool.accAlpacaPerShare) - user.rewardDebt
+    //   pending reward = (user.amount * pool.accCheckPerShare) - user.rewardDebt
     //
     // Whenever a user deposits or withdraws Staking tokens to a pool. Here's what happens:
-    //   1. The pool's `accAlpacaPerShare` (and `lastRewardBlock`) gets updated.
+    //   1. The pool's `accCheckPerShare` (and `lastRewardBlock`) gets updated.
     //   2. User receives the pending reward sent to his/her address.
     //   3. User's `amount` gets updated.
     //   4. User's `rewardDebt` gets updated.
@@ -35,25 +35,24 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     address stakeToken; // Address of Staking token contract.
     uint256 allocPoint; // How many allocation points assigned to this pool. CHECKs to distribute per block.
     uint256 lastRewardBlock; // Last block number that CHECKs distribution occurs.
-    uint256 accAlpacaPerShare; // Accumulated CHECKs per share, times 1e12. See below.
-    uint256 accAlpacaPerShareTilBonusEnd; // Accumated CHECKs per share until Bonus End.
+    uint256 accCheckPerShare; // Accumulated CHECKs per share, times 1e12. See below.
+    uint256 accCheckPerShareTilBonusEnd; // Accumated CHECKs per share until Bonus End.
     uint256 projectId;
     uint256 lpSupply;
+    uint256 totalStakeToken;
   }
 
   struct ProjectInfo {
     string name;
     bool isImpEnd;  // if ==true stop minting
-    uint256 pubStartBlock; // Publicity period // if block.number>= start minting
-    uint256 lauStartBlock; // Launch period
-    uint256 impStartBlock; // Implementation period
+    uint256 pubStartTime; // Publicity period // if block.number>= start minting
+    uint256 lauStartTime; // Launch period
+    uint256 impStartTime; // Implementation period
     // uint256 referendumLimit;
     // Bonus muliplier for early makers.
     uint256 bonusMultiplier;
     // Block number when bonus CHECK period ends.
     uint256 bonusEndBlock;
-    // Bonus lock-up in BPS
-    uint256 bonusLockUpBps;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 totalAllocPoint;
   }
@@ -62,16 +61,16 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   // get status of project
   function _project_status(uint256 _pid) internal view returns(ProjectStatus) {
     ProjectInfo storage project = projectInfo[_pid];
-    if (block.number >= project.pubStartBlock && block.number < project.lauStartBlock) {
+    if (block.timestamp >= project.pubStartTime && block.timestamp < project.lauStartTime) {
       return ProjectStatus.PUBLICIZING;
     }
-    if (block.number >= project.lauStartBlock && block.number < project.impStartBlock) {
+    if (block.timestamp >= project.lauStartTime && block.timestamp < project.impStartTime) {
       return ProjectStatus.LAUNCHING;
     }
-    if (block.number >= project.impStartBlock && !project.isImpEnd) {
+    if (block.timestamp >= project.impStartTime && !project.isImpEnd) {
       return ProjectStatus.IMPLEMENTINT;
     }
-    if (block.number >= project.impStartBlock && project.isImpEnd) {
+    if (block.timestamp >= project.impStartTime && project.isImpEnd) {
       return ProjectStatus.RUNNING;
     }
     return ProjectStatus.PENDING;
@@ -136,7 +135,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     devaddr = _devaddr;
   }
 
-  function setAlpacaPerBlock(uint256 _checkPerBlock) public onlyOwner {
+  function setCheckPerBlock(uint256 _checkPerBlock) public onlyOwner {
     checkPerBlock = _checkPerBlock;
   }
 
@@ -145,36 +144,32 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   function setBonus(
     uint256 _projectId,
     uint256 _bonusMultiplier,
-    uint256 _bonusEndBlock,
-    uint256 _bonusLockUpBps
+    uint256 _bonusEndBlock
   ) public override onlyOwner {
     require(_bonusEndBlock > block.number, "setBonus: bad bonusEndBlock");
     require(_bonusMultiplier > 1, "setBonus: bad bonusMultiplier");
     ProjectInfo storage project = projectInfo[_projectId];
     project.bonusMultiplier = _bonusMultiplier;
     project.bonusEndBlock = _bonusEndBlock;
-    project.bonusLockUpBps = _bonusLockUpBps;
   }
 
   function addProject(
     string memory _name,
-    uint256 _pubStartBlock,
-    uint256 _lauStartBlock,
-    uint256 _impStartBlock,
+    uint256 _pubStartTime,
+    uint256 _lauStartTime,
+    uint256 _impStartTime,
     uint256 _bonusMultiplier,
-    uint256 _bonusEndBlock,
-    uint256 _bonusLockUpBps
+    uint256 _bonusEndBlock
   ) public override onlyOwner {
-    require(_pubStartBlock < _lauStartBlock && _lauStartBlock<_impStartBlock, "error: pubStartBlock > lauStartBlock or _lauStartBlock>_impStartBlock");
+    require(_pubStartTime < _lauStartTime && _lauStartTime<_impStartTime, "error: pubStartTime > lauStartTime or _lauStartTime>_impStartTime");
     projectInfo.push(
       ProjectInfo({
         name: _name,
-        pubStartBlock: _pubStartBlock,
-        lauStartBlock: _lauStartBlock,
-        impStartBlock: _impStartBlock,
+        pubStartTime: _pubStartTime,
+        lauStartTime: _lauStartTime,
+        impStartTime: _impStartTime,
         bonusMultiplier: _bonusMultiplier,
         bonusEndBlock: _bonusEndBlock,
-        bonusLockUpBps: _bonusLockUpBps,
         totalAllocPoint: 0,
         isImpEnd: false
       })
@@ -188,15 +183,15 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   function setProject(
     uint256 _projectId,
     string memory _name,
-    uint256 _pubStartBlock,
-    uint256 _lauStartBlock,
-    uint256 _impStartBlock
+    uint256 _pubStartTime,
+    uint256 _lauStartTime,
+    uint256 _impStartTime
   ) public override onlyOwner {
-    require(_pubStartBlock < _lauStartBlock && _lauStartBlock<_impStartBlock, "error: pubStartBlock > lauStartBlock or _lauStartBlock>_impStartBlock");
+    require(_pubStartTime < _lauStartTime && _lauStartTime<_impStartTime, "error: pubStartTime > lauStartTime or _lauStartTime>_impStartTime");
     projectInfo[_projectId].name = _name;
-    projectInfo[_projectId].pubStartBlock = _pubStartBlock;
-    projectInfo[_projectId].lauStartBlock = _lauStartBlock;
-    projectInfo[_projectId].impStartBlock = _impStartBlock;
+    projectInfo[_projectId].pubStartTime = _pubStartTime;
+    projectInfo[_projectId].lauStartTime = _lauStartTime;
+    projectInfo[_projectId].impStartTime = _impStartTime;
   }
 
   // Add a new lp to the pool. Can only be called by the owner.
@@ -214,7 +209,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     // require(projectInfo[_projectId]), "add: stakeToken dup");
     require(!isDuplicatedPool(_projectId, _stakeToken), "add: stakeToken dup");
     ProjectInfo storage project = projectInfo[_projectId];
-    uint256 lastRewardBlock = block.number > project.lauStartBlock ? block.number : project.lauStartBlock;
+    uint256 lastRewardBlock = block.number > project.lauStartTime ? block.number : project.lauStartTime;
     project.totalAllocPoint = project.totalAllocPoint.add(_allocPoint);
     poolInfo.push(
       PoolInfo({
@@ -222,8 +217,8 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
         stakeToken: _stakeToken,
         allocPoint: _allocPoint,
         lastRewardBlock: lastRewardBlock,
-        accAlpacaPerShare: 0,
-        accAlpacaPerShareTilBonusEnd: 0,
+        accCheckPerShare: 0,
+        accCheckPerShareTilBonusEnd: 0,
         lpSupply: 0
       })
     );
@@ -315,15 +310,15 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   function pendingCheck(uint256 _pid, address _user) external override view returns (uint256) {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][_user];
-    uint256 accAlpacaPerShare = pool.accAlpacaPerShare;
+    uint256 accCheckPerShare = pool.accCheckPerShare;
     // uint256 lpSupply = IERC20(pool.stakeToken).balanceOf(address(this));
     uint256 lpSupply = pool.lpSupply;
     if (block.number > pool.lastRewardBlock && lpSupply != 0) {
       uint256 multiplier = getMultiplier(pool.projectId, pool.lastRewardBlock, block.number);
       uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(projectInfo[pool.projectId].totalAllocPoint);
-      accAlpacaPerShare = accAlpacaPerShare.add(checkReward.mul(1e12).div(lpSupply));
+      accCheckPerShare = accCheckPerShare.add(checkReward.mul(1e12).div(lpSupply));
     }
-    return user.amount.mul(accAlpacaPerShare).div(1e12).sub(user.rewardDebt);
+    return user.amount.mul(accCheckPerShare).div(1e12).sub(user.rewardDebt);
   }
 
   // Update reward vairables for all pools. Be careful of gas spending!
@@ -354,14 +349,14 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
     check.mint(devaddr, checkReward.div(10));
     check.mint(address(this), checkReward);
-    pool.accAlpacaPerShare = pool.accAlpacaPerShare.add(checkReward.mul(1e12).div(lpSupply));
-    // update accAlpacaPerShareTilBonusEnd
+    pool.accCheckPerShare = pool.accCheckPerShare.add(checkReward.mul(1e12).div(lpSupply));
+    // update accCheckPerShareTilBonusEnd
     if (block.number <= project.bonusEndBlock) {
-      pool.accAlpacaPerShareTilBonusEnd = pool.accAlpacaPerShare;
+      pool.accCheckPerShareTilBonusEnd = pool.accCheckPerShare;
     }
     if(block.number > project.bonusEndBlock && pool.lastRewardBlock < project.bonusEndBlock) {
       uint256 checkBonusPortion = project.bonusEndBlock.sub(pool.lastRewardBlock).mul(project.bonusMultiplier).mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
-      pool.accAlpacaPerShareTilBonusEnd = pool.accAlpacaPerShareTilBonusEnd.add(checkBonusPortion.mul(1e12).div(lpSupply));
+      pool.accCheckPerShareTilBonusEnd = pool.accCheckPerShareTilBonusEnd.add(checkBonusPortion.mul(1e12).div(lpSupply));
     }
     pool.lastRewardBlock = block.number;
   }
@@ -377,8 +372,9 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     if (user.fundedBy == address(0)) user.fundedBy = msg.sender;
     IERC20(pool.stakeToken).safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
-    user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12);
+    pool.totalStakeToken = user.totalStakeToken.add(_amount);
+    user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
+    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
     pool.lpSupply = pool.lpSupply.add(_amount);
     emit Deposit(msg.sender, _pid, _amount);
   }
@@ -400,8 +396,8 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     updatePool(_pid);
     _harvest(_for, _pid);
     user.amount = user.amount.sub(_amount);
-    user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12);
+    user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
+    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
     pool.lpSupply = pool.lpSupply.sub(_amount);
     if (pool.stakeToken != address(0)) {
       IERC20(pool.stakeToken).safeTransfer(address(msg.sender), _amount);
@@ -415,17 +411,17 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     UserInfo storage user = userInfo[_pid][msg.sender];
     updatePool(_pid);
     _harvest(msg.sender, _pid);
-    user.rewardDebt = user.amount.mul(pool.accAlpacaPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accAlpacaPerShareTilBonusEnd).div(1e12);
+    user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
+    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
   }
 
   function _harvest(address _to, uint256 _pid) internal {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][_to];
     require(user.amount > 0, "nothing to harvest");
-    uint256 pending = user.amount.mul(pool.accAlpacaPerShare).div(1e12).sub(user.rewardDebt);
+    uint256 pending = user.amount.mul(pool.accCheckPerShare).div(1e12).sub(user.rewardDebt);
     require(pending <= check.balanceOf(address(this)), "wtf not enough check");
-    _safeAlpacaTransfer(_to, pending);
+    _safeCheckTransfer(_to, pending);
   }
 
   // Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -439,7 +435,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   }
 
     // Safe check transfer function, just in case if rounding error causes pool to not have enough CHECKs.
-  function _safeAlpacaTransfer(address _to, uint256 _amount) internal {
+  function _safeCheckTransfer(address _to, uint256 _amount) internal {
     uint256 checkBal = check.balanceOf(address(this));
     if (_amount > checkBal) {
       check.transfer(_to, checkBal);
