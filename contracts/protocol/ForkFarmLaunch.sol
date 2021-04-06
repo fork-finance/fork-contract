@@ -1,12 +1,12 @@
 pragma solidity 0.6.6;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./CheckToken.sol";
-import "./interfaces/IForkFarmLaunch.sol";
 
 // ForkLaunch is a smart contract for distributing CHECK by asking user to stake the FORK token.
-contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
+contract ForkFarmLaunch is Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
   using SafeERC20 for CheckToken;
@@ -15,8 +15,6 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   struct UserInfo {
     uint256 amount; // How many Staking tokens the user has provided.
     uint256 rewardDebt; // Reward debt. See explanation below.
-    uint256 bonusDebt; // Last block that user exec something to the pool.
-    address fundedBy; // Funded by who?
     //
     // We do some fancy math here. Basically, any point in time, the amount of CHECKs
     // entitled to a user but is pending to be distributed is:
@@ -39,42 +37,8 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     uint256 accCheckPerShareTilBonusEnd; // Accumated CHECKs per share until Bonus End.
     uint256 projectId;
     uint256 lpSupply;
-    uint256 totalStakeToken;
   }
 
-  struct ProjectInfo {
-    string name;
-    bool isImpEnd;  // if ==true stop minting
-    uint256 pubStartTime; // Publicity period // if block.number>= start minting
-    uint256 lauStartTime; // Launch period
-    uint256 impStartTime; // Implementation period
-    // uint256 referendumLimit;
-    // Bonus muliplier for early makers.
-    uint256 bonusMultiplier;
-    // Block number when bonus CHECK period ends.
-    uint256 bonusEndBlock;
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
-    uint256 totalAllocPoint;
-  }
-  enum ProjectStatus {PENDING, PUBLICIZING, LAUNCHING, IMPLEMENTINT, RUNNING}
-
-  // get status of project
-  function _project_status(uint256 _pid) internal view returns(ProjectStatus) {
-    ProjectInfo storage project = projectInfo[_pid];
-    if (block.timestamp >= project.pubStartTime && block.timestamp < project.lauStartTime) {
-      return ProjectStatus.PUBLICIZING;
-    }
-    if (block.timestamp >= project.lauStartTime && block.timestamp < project.impStartTime) {
-      return ProjectStatus.LAUNCHING;
-    }
-    if (block.timestamp >= project.impStartTime && !project.isImpEnd) {
-      return ProjectStatus.IMPLEMENTINT;
-    }
-    if (block.timestamp >= project.impStartTime && project.isImpEnd) {
-      return ProjectStatus.RUNNING;
-    }
-    return ProjectStatus.PENDING;
-  }
   // Info of cash-pool
   struct CashPoolInfo {
     uint256 cashTotal;
@@ -98,17 +62,18 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   address public devaddr;
   // CHECK tokens created per block.
   uint256 public checkPerBlock;
+  // muliplier
+  uint256 public BONUS_MULTIPLIER = 1;
 
-  // Info of each project.
-  ProjectInfo[] public projectInfo;
   // Info of each pool.
   PoolInfo[] public poolInfo;
   // Info of each user that stakes Staking tokens.
   mapping(uint256 => mapping(address => UserInfo)) public userInfo;
-  
+  // Total allocation points. Must be the sum of all allocation points in all pools.
+  uint256 public totalAllocPoint = 0;
   // The block number when CHECK mining starts.
-  // uint256 public startBlock;
-
+  uint256 public startBlock;
+  
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
   event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
   event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -116,13 +81,15 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   event CashedCheck(address indexed user, uint256 indexed pid, uint256 amount, uint256 pending);
 
   constructor(
-    address _check,
+    CheckToken _check,
     address _devaddr,
-    uint256 _checkPerBlock
+    uint256 _checkPerBlock,
+    uint256 _startBlock
   ) public {
-    check = CheckToken(_check);
+    check = _check;
     devaddr = _devaddr;
     checkPerBlock = _checkPerBlock;
+    startBlock = _startBlock;
   }
 
   /**
@@ -135,82 +102,38 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     devaddr = _devaddr;
   }
 
-  function setCheckPerBlock(uint256 _checkPerBlock) public onlyOwner {
+  function updateCheckPerBlock(uint256 _checkPerBlock) public onlyOwner {
     checkPerBlock = _checkPerBlock;
   }
 
-  // Set Bonus params. bonus will start to accu on the next block that this function executed
-  // See the calculation and counting in test file.
-  function setBonus(
-    uint256 _projectId,
-    uint256 _bonusMultiplier,
-    uint256 _bonusEndBlock
-  ) public override onlyOwner {
-    require(_bonusEndBlock > block.number, "setBonus: bad bonusEndBlock");
-    require(_bonusMultiplier > 1, "setBonus: bad bonusMultiplier");
-    ProjectInfo storage project = projectInfo[_projectId];
-    project.bonusMultiplier = _bonusMultiplier;
-    project.bonusEndBlock = _bonusEndBlock;
+  function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
+    BONUS_MULTIPLIER = multiplierNumber;
   }
 
-  function addProject(
-    string memory _name,
-    uint256 _pubStartTime,
-    uint256 _lauStartTime,
-    uint256 _impStartTime,
-    uint256 _bonusMultiplier,
-    uint256 _bonusEndBlock
-  ) public override onlyOwner {
-    require(_pubStartTime < _lauStartTime && _lauStartTime<_impStartTime, "error: pubStartTime > lauStartTime or _lauStartTime>_impStartTime");
-    projectInfo.push(
-      ProjectInfo({
-        name: _name,
-        pubStartTime: _pubStartTime,
-        lauStartTime: _lauStartTime,
-        impStartTime: _impStartTime,
-        bonusMultiplier: _bonusMultiplier,
-        bonusEndBlock: _bonusEndBlock,
-        totalAllocPoint: 0,
-        isImpEnd: false
-      })
-    );
+  function updatePoolPorjectId(uint256 _pid, uint256 _projectId) public onlyOwner {
+    poolInfo[_pid].projectId = _pid;
   }
 
-  function setProjectIsImpEnd(uint256 _projectId, bool _isImpEnd) public override onlyOwner {
-    projectInfo[_projectId].isImpEnd = _isImpEnd;
-  }
-
-  function setProject(
-    uint256 _projectId,
-    string memory _name,
-    uint256 _pubStartTime,
-    uint256 _lauStartTime,
-    uint256 _impStartTime
-  ) public override onlyOwner {
-    require(_pubStartTime < _lauStartTime && _lauStartTime<_impStartTime, "error: pubStartTime > lauStartTime or _lauStartTime>_impStartTime");
-    projectInfo[_projectId].name = _name;
-    projectInfo[_projectId].pubStartTime = _pubStartTime;
-    projectInfo[_projectId].lauStartTime = _lauStartTime;
-    projectInfo[_projectId].impStartTime = _impStartTime;
-  }
+  function poolLength() external view returns (uint256) {
+        return poolInfo.length;
+    }
 
   // Add a new lp to the pool. Can only be called by the owner.
-  function addPool(
+  function add(
     uint256 _projectId,
     uint256 _allocPoint,
     address _stakeToken,
     bool _withUpdate
-  ) public override onlyOwner {
+  ) public  onlyOwner {
     if (_withUpdate) {
       massUpdatePools();
     }
     require(_stakeToken != address(0), "add: not stakeToken addr");
-    // check exisit projectId
-    // require(projectInfo[_projectId]), "add: stakeToken dup");
+    // check exisit
     require(!isDuplicatedPool(_projectId, _stakeToken), "add: stakeToken dup");
-    ProjectInfo storage project = projectInfo[_projectId];
-    uint256 lastRewardBlock = block.number > project.lauStartTime ? block.number : project.lauStartTime;
-    project.totalAllocPoint = project.totalAllocPoint.add(_allocPoint);
+
+    uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+    totalAllocPoint = totalAllocPoint.add(_allocPoint);
     poolInfo.push(
       PoolInfo({
         projectId: _projectId,
@@ -218,23 +141,50 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
         allocPoint: _allocPoint,
         lastRewardBlock: lastRewardBlock,
         accCheckPerShare: 0,
-        accCheckPerShareTilBonusEnd: 0,
-        lpSupply: 0
+        totalStakeToken: 0
       })
     );
+    updateStakingPool();
   }
 
   // Update the given pool's CHECK allocation point. Can only be called by the owner.
-  function setPool(
-    uint256 _pid,
-    uint256 _allocPoint,
-    bool _withUpdate
-  ) public override onlyOwner {
+  function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
     if (_withUpdate) {
       massUpdatePools();
     }
-    projectInfo[poolInfo[_pid].projectId].totalAllocPoint = projectInfo[poolInfo[_pid].projectId].totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
+    uint256 prevAllocPoint = poolInfo[_pid].allocPoint;
     poolInfo[_pid].allocPoint = _allocPoint;
+    if (prevAllocPoint != _allocPoint) {
+      totalAllocPoint = totalAllocPoint.sub(prevAllocPoint).add(_allocPoint);
+      updateStakingPool();
+    }
+  }
+
+  function updateStakingPool() internal {
+    uint256 length = poolInfo.length;
+    uint256 points = 0;
+    uint256[] memory tmpPoolId;
+    for (uint256 pid = 0; pid < length; ++pid) {
+      if (poolInfo[projectId] == 0) {
+        tmpPoolId.push(pid);
+        tmpPoints.add(poolInfo[pid].allocPoint);
+        continue;
+      }
+      points = points.add(poolInfo[pid].allocPoint);
+    }
+    if (points != 0) {
+      points = points.div(tmpPoolId.length.sub(1).mul(3));
+      for (uint256 tpid = 0; tpid < tmpPoolId.length; ++tpid) {
+        totalAllocPoint = totalAllocPoint.sub(poolInfo[tpid].allocPoint).add(points);
+        poolInfo[tpid].allocPoint = points;
+      }
+      
+    }
+  }
+
+  // Return reward multiplier over the given _from to _to block.
+  function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
+    return _to.sub(_from).mul(BONUS_MULTIPLIER);
   }
 
   function addCashPool(
@@ -242,7 +192,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     address _cashToken,
     uint256 _startBlock,
     uint256 _endBlock
-  ) public override onlyOwner {
+  ) public  onlyOwner {
     require(_cashToken != address(0), "add: not cashToken addr");
     require(_endBlock > _startBlock, "_endBlock < _startBlock");
     cashPoolInfo.push(
@@ -262,7 +212,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     address _cashToken,
     uint256 _startBlock,
     uint256 _endBlock
-  ) public override onlyOwner {
+  ) public  onlyOwner {
     require(_cashToken != address(0), "add: not cashToken addr");
     require(_endBlock > _startBlock, "_endBlock < _startBlock");
 
@@ -284,38 +234,16 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     return false;
   }
 
-  function poolLength() external override view returns (uint256) {
-    return poolInfo.length;
-  }
-
-  function manualMint(address _to, uint256 _amount) public onlyOwner {
-    check.manualMint(_to, _amount);
-  }
-
-  // Return reward multiplier over the given _from to _to block.
-  function getMultiplier(uint256 _projectId, uint256 _lastRewardBlock, uint256 _currentBlock) public view returns (uint256) {
-    uint256 bonusEndBlock = projectInfo[_projectId].bonusEndBlock;
-    uint256 bonusMultiplier = projectInfo[_projectId].bonusMultiplier;
-    if (_currentBlock <= bonusEndBlock) {
-      return _currentBlock.sub(_lastRewardBlock).mul(bonusMultiplier);
-    }
-    if (_lastRewardBlock >= bonusEndBlock) {
-      return _currentBlock.sub(_lastRewardBlock);
-    }
-    // This is the case where bonusEndBlock is in the middle of _lastRewardBlock and _currentBlock block.
-    return bonusEndBlock.sub(_lastRewardBlock).mul(bonusMultiplier).add(_currentBlock.sub(bonusEndBlock));
-  }
 
   // View function to see pending CHECKs on frontend.
-  function pendingCheck(uint256 _pid, address _user) external override view returns (uint256) {
+  function pendingCheck(uint256 _pid, address _user) external  view returns (uint256) {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][_user];
     uint256 accCheckPerShare = pool.accCheckPerShare;
-    // uint256 lpSupply = IERC20(pool.stakeToken).balanceOf(address(this));
     uint256 lpSupply = pool.lpSupply;
     if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-      uint256 multiplier = getMultiplier(pool.projectId, pool.lastRewardBlock, block.number);
-      uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(projectInfo[pool.projectId].totalAllocPoint);
+      uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+      uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
       accCheckPerShare = accCheckPerShare.add(checkReward.mul(1e12).div(lpSupply));
     }
     return user.amount.mul(accCheckPerShare).div(1e12).sub(user.rewardDebt);
@@ -330,14 +258,9 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   }
 
   // Update reward variables of the given pool to be up-to-date.
-  function updatePool(uint256 _pid) public override {
+  function updatePool(uint256 _pid) public  {
     PoolInfo storage pool = poolInfo[_pid];
-    ProjectInfo storage project = projectInfo[pool.projectId];
-    ProjectStatus status = _project_status(pool.projectId);
     if (block.number <= pool.lastRewardBlock) {
-      return;
-    }
-    if (status != ProjectStatus.LAUNCHING && status != ProjectStatus.IMPLEMENTINT) {
       return;
     }
     uint256 lpSupply = pool.lpSupply;
@@ -345,59 +268,45 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
       pool.lastRewardBlock = block.number;
       return;
     }
-    uint256 multiplier = getMultiplier(pool.projectId, pool.lastRewardBlock, block.number);
-    uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
-    check.mint(devaddr, checkReward.div(10));
-    check.mint(address(this), checkReward);
+    uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+    uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+    cake.mint(devaddr, checkReward.div(10));
+    cake.mint(address(this), checkReward);
     pool.accCheckPerShare = pool.accCheckPerShare.add(checkReward.mul(1e12).div(lpSupply));
-    // update accCheckPerShareTilBonusEnd
-    if (block.number <= project.bonusEndBlock) {
-      pool.accCheckPerShareTilBonusEnd = pool.accCheckPerShare;
-    }
-    if(block.number > project.bonusEndBlock && pool.lastRewardBlock < project.bonusEndBlock) {
-      uint256 checkBonusPortion = project.bonusEndBlock.sub(pool.lastRewardBlock).mul(project.bonusMultiplier).mul(checkPerBlock).mul(pool.allocPoint).div(project.totalAllocPoint);
-      pool.accCheckPerShareTilBonusEnd = pool.accCheckPerShareTilBonusEnd.add(checkBonusPortion.mul(1e12).div(lpSupply));
-    }
     pool.lastRewardBlock = block.number;
   }
 
   // Deposit Staking tokens to FairLaunchToken for CHECK allocation.
-  function deposit(address _for, uint256 _pid, uint256 _amount) public override {
+  function deposit(uint256 _pid, uint256 _amount) public  {
+    require(_pid < poolInfo.length, 'pool is not existed');
     PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][_for];
-    if (user.fundedBy != address(0)) require(user.fundedBy == msg.sender, "bad sof");
-    require(pool.stakeToken != address(0), "deposit: not accept deposit");
+    UserInfo storage user = userInfo[_pid][msg.sender];
     updatePool(_pid);
-    if (user.amount > 0) _harvest(_for, _pid);
-    if (user.fundedBy == address(0)) user.fundedBy = msg.sender;
+    if (user.amount > 0) _harvest(_pid);
     IERC20(pool.stakeToken).safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
-    pool.totalStakeToken = user.totalStakeToken.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
     pool.lpSupply = pool.lpSupply.add(_amount);
     emit Deposit(msg.sender, _pid, _amount);
   }
 
   // Withdraw Staking tokens from FairLaunchToken.
-  function withdraw(address _for, uint256 _pid, uint256 _amount) public override {
-    _withdraw(_for, _pid, _amount);
+  function withdraw(uint256 _pid, uint256 _amount) public  {
+    _withdraw(_pid, _amount);
   }
 
-  function withdrawAll(address _for, uint256 _pid) public override {
-    _withdraw(_for, _pid, userInfo[_pid][_for].amount);
+  function withdrawAll(uint256 _pid) public {
+    _withdraw(_pid, userInfo[_pid][msg.sender].amount);
   }
 
-  function _withdraw(address _for, uint256 _pid, uint256 _amount) internal {
+  function _withdraw(uint256 _pid, uint256 _amount) internal {
     PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][_for];
-    require(user.fundedBy == msg.sender, "only funder");
+    UserInfo storage user = userInfo[_pid][msg.sender];
     require(user.amount >= _amount, "withdraw: not good");
     updatePool(_pid);
-    _harvest(_for, _pid);
+    _harvest(_pid);
     user.amount = user.amount.sub(_amount);
     user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
     pool.lpSupply = pool.lpSupply.sub(_amount);
     if (pool.stakeToken != address(0)) {
       IERC20(pool.stakeToken).safeTransfer(address(msg.sender), _amount);
@@ -406,22 +315,21 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   }
 
   // Harvest CHECKs earn from the pool.
-  function harvest(uint256 _pid) public override {
+  function harvest(uint256 _pid) public  {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
     updatePool(_pid);
     _harvest(msg.sender, _pid);
     user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
-    user.bonusDebt = user.amount.mul(pool.accCheckPerShareTilBonusEnd).div(1e12);
   }
 
-  function _harvest(address _to, uint256 _pid) internal {
+  function _harvest(uint256 _pid) internal {
     PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][_to];
+    UserInfo storage user = userInfo[_pid][msg.sender];
     require(user.amount > 0, "nothing to harvest");
     uint256 pending = user.amount.mul(pool.accCheckPerShare).div(1e12).sub(user.rewardDebt);
     require(pending <= check.balanceOf(address(this)), "wtf not enough check");
-    _safeCheckTransfer(_to, pending);
+    _safeCheckTransfer(msg.sender, pending);
   }
 
   // Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -429,9 +337,9 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
     IERC20(pool.stakeToken).safeTransfer(address(msg.sender), user.amount);
-    emit EmergencyWithdraw(msg.sender, _pid, user.amount);
     user.amount = 0;
     user.rewardDebt = 0;
+    emit EmergencyWithdraw(msg.sender, _pid, user.amount);
   }
 
     // Safe check transfer function, just in case if rounding error causes pool to not have enough CHECKs.
@@ -445,7 +353,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
   }
 
   // Deposit CHECK-TOKEN to CashPool for FPT allocation.
-  function depositCheckToCashPool(address _for, uint256 _pid, uint256 _amount) public override {
+  function depositCheckToCashPool(address _for, uint256 _pid, uint256 _amount) public  {
     CashPoolInfo storage pool = cashPoolInfo[_pid];
     CashUserInfo storage user = cashUserInfo[_pid][_for];
     require(block.number >= pool.startBlock && block.number < pool.endBlock, "The cash-out activity did not start");
@@ -455,7 +363,7 @@ contract ForkFarmLaunch is IForkFarmLaunch, Ownable {
     emit DepositCheckToCashPool(msg.sender, _pid, _amount);
   }
 
-  function cashCheck(uint256 _pid) public override {
+  function cashCheck(uint256 _pid) public  {
     CashPoolInfo storage pool = cashPoolInfo[_pid];
     CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
     require(block.number >= pool.startBlock && block.number < pool.endBlock, "The cash-out activity did not start");
