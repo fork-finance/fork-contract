@@ -126,7 +126,7 @@ contract FairLaunch is IFairLaunch, Ownable {
         allocPoint: _allocPoint,
         lastRewardBlock: lastRewardBlock,
         accForkPerShare: 0,
-        accForkPerShareTilBonusEnd: 0,
+        accForkPerShareTilBonusEnd: 0
       })
     );
   }
@@ -261,7 +261,7 @@ contract FairLaunch is IFairLaunch, Ownable {
     if (pool.stakeToken != address(0)) {
       IERC20(pool.stakeToken).safeTransfer(address(msg.sender), _amount);
     }
-    emit Withdraw(msg.sender, _pid, user.amount);
+    emit Withdraw(msg.sender, _pid, _amount);
   }
 
   // Harvest FORKs earn from the pool.

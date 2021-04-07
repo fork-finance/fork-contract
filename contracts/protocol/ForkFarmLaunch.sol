@@ -34,7 +34,6 @@ contract ForkFarmLaunch is Ownable {
     uint256 allocPoint; // How many allocation points assigned to this pool. CHECKs to distribute per block.
     uint256 lastRewardBlock; // Last block number that CHECKs distribution occurs.
     uint256 accCheckPerShare; // Accumulated CHECKs per share, times 1e12. See below.
-    uint256 accCheckPerShareTilBonusEnd; // Accumated CHECKs per share until Bonus End.
     uint256 projectId;
     uint256 lpSupply;
   }
@@ -111,7 +110,7 @@ contract ForkFarmLaunch is Ownable {
   }
 
   function updatePoolPorjectId(uint256 _pid, uint256 _projectId) public onlyOwner {
-    poolInfo[_pid].projectId = _pid;
+    poolInfo[_pid].projectId = _projectId;
   }
 
   function poolLength() external view returns (uint256) {
@@ -141,10 +140,9 @@ contract ForkFarmLaunch is Ownable {
         allocPoint: _allocPoint,
         lastRewardBlock: lastRewardBlock,
         accCheckPerShare: 0,
-        totalStakeToken: 0
+        lpSupply: 0
       })
     );
-    updateStakingPool();
   }
 
   // Update the given pool's CHECK allocation point. Can only be called by the owner.
@@ -156,29 +154,6 @@ contract ForkFarmLaunch is Ownable {
     poolInfo[_pid].allocPoint = _allocPoint;
     if (prevAllocPoint != _allocPoint) {
       totalAllocPoint = totalAllocPoint.sub(prevAllocPoint).add(_allocPoint);
-      updateStakingPool();
-    }
-  }
-
-  function updateStakingPool() internal {
-    uint256 length = poolInfo.length;
-    uint256 points = 0;
-    uint256[] memory tmpPoolId;
-    for (uint256 pid = 0; pid < length; ++pid) {
-      if (poolInfo[projectId] == 0) {
-        tmpPoolId.push(pid);
-        tmpPoints.add(poolInfo[pid].allocPoint);
-        continue;
-      }
-      points = points.add(poolInfo[pid].allocPoint);
-    }
-    if (points != 0) {
-      points = points.div(tmpPoolId.length.sub(1).mul(3));
-      for (uint256 tpid = 0; tpid < tmpPoolId.length; ++tpid) {
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[tpid].allocPoint).add(points);
-        poolInfo[tpid].allocPoint = points;
-      }
-      
     }
   }
 
@@ -270,8 +245,8 @@ contract ForkFarmLaunch is Ownable {
     }
     uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
     uint256 checkReward = multiplier.mul(checkPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-    cake.mint(devaddr, checkReward.div(10));
-    cake.mint(address(this), checkReward);
+    check.mint(devaddr, checkReward.div(10));
+    check.mint(address(this), checkReward);
     pool.accCheckPerShare = pool.accCheckPerShare.add(checkReward.mul(1e12).div(lpSupply));
     pool.lastRewardBlock = block.number;
   }
@@ -311,7 +286,7 @@ contract ForkFarmLaunch is Ownable {
     if (pool.stakeToken != address(0)) {
       IERC20(pool.stakeToken).safeTransfer(address(msg.sender), _amount);
     }
-    emit Withdraw(msg.sender, _pid, user.amount);
+    emit Withdraw(msg.sender, _pid, _amount);
   }
 
   // Harvest CHECKs earn from the pool.
@@ -319,7 +294,7 @@ contract ForkFarmLaunch is Ownable {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
     updatePool(_pid);
-    _harvest(msg.sender, _pid);
+    _harvest(_pid);
     user.rewardDebt = user.amount.mul(pool.accCheckPerShare).div(1e12);
   }
 

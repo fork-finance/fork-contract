@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MockERC20 is ERC20Burnable, Ownable {
 
-    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) public {
-        _mint(msg.sender, 10000000 * 10**18);
+    constructor(string memory _name, string memory _symbol, uint256 _totalSupply) ERC20(_name, _symbol) public {
+        _mint(msg.sender, _totalSupply);
     }
 
     /**
