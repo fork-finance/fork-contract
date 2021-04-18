@@ -3,7 +3,7 @@ module.exports = {
     DAI: {
         develop: '',
         ganache: '',
-        testnet: '',
+        testnet: '0x97CD44c56Cd8CF914B32eDfc2A7FdC537f20C21e',
         mainnet: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'
     },
     WBNB: {

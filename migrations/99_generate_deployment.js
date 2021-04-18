@@ -14,7 +14,7 @@ const IERC20 = artifacts.require('IERC20');
 const IWBNB = artifacts.require('IWETH');
 
 const FairLaunch = artifacts.require("FairLaunch");
-const ForkFarmLaunch = artifacts.require("ForkFarmLaunch");
+const ForkFarmLaunch = artifacts.require("IDFO");
 const IFairLaunch = artifacts.require("IFairLaunch");
 const IForkFarmLaunch = artifacts.require("IForkFarmLaunch");
 
@@ -24,20 +24,21 @@ const UniswapV2Router02 = artifacts.require('UniswapV2Router02');
 // const {ALPACA_REWARD_PER_BLOCK, START_BLOCK} = require('./pool');
 
 module.exports = async (deployer, network, accounts) => {
+  // return;
   let deployments;
   console.log(">> Creating the deployment file");
-  const uniswapFactory = network === 'mainnet' ? await UniswapV2Factory.at(knownContracts.UniswapV2Factory[network]) : await UniswapV2Factory.deployed();
-  const uniswapRouter = network === 'mainnet' ? await UniswapV2Router02.at(knownContracts.UniswapV2Router02[network]) : await UniswapV2Router02.deployed();
-  const dai = network === 'mainnet' ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
-  const wbnb = network === 'mainnet' ? await IWBNB.at(knownContracts.WBNB[network]) : await MockWBNB.deployed();
-  const fairLaunch = await FairLaunch.deployed();
+  const uniswapRouter = knownContracts.UniswapV2Router02[network] ? await UniswapV2Router02.at(knownContracts.UniswapV2Router02[network]) : await UniswapV2Router02.deployed();
+  const uniswapFactory = knownContracts.UniswapV2Factory[network] ? await UniswapV2Factory.at(knownContracts.UniswapV2Factory[network]) : await UniswapV2Factory.deployed();
+  const dai = knownContracts.DAI[network] ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
+  const wbnb = knownContracts.WBNB[network] ? await IWBNB.at(knownContracts.WBNB[network]) : await MockWBNB.deployed();
+  // const fairLaunch = await FairLaunch.deployed();
   const forkFarmLaunch = await ForkFarmLaunch.deployed();
 
   deployments = {
-    FairLaunch: {
-      address: fairLaunch.address,
-      pools: await getFairLaunchPools(fairLaunch)
-    },
+    // FairLaunch: {
+    //   address: fairLaunch.address,
+    //   pools: await getFairLaunchPools(fairLaunch)
+    // },
     ForkFarmLaunch: {
       address: forkFarmLaunch.address,
       pools: await getForkFarmLaunchPools(forkFarmLaunch)
@@ -102,9 +103,10 @@ const getForkFarmLaunchPools = async (fairLaunch) => {
     console.log('allocPoint', poolInfo.allocPoint.toString())
     pools.push({
       id: pid,
+      projectId: poolInfo.projectId,
       stakingToken: stakeToken,
       address: poolInfo.stakeToken,
-      allocPoint: poolInfo.allocPoint.toString()
+      allocPoint: poolInfo.allocPoint.toString(),
     });
   }
   return pools;

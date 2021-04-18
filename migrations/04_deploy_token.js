@@ -31,10 +31,10 @@ async function deployToken(deployer, network, accounts) {
   if (network == 'develop') {
     await deployer.deploy(ForkToken, startReleaseBlock, endReleaseBlock);
   }
-  await deployer.deploy(CheckToken);
+  await deployer.deploy(CheckToken, startReleaseBlock, endReleaseBlock);
 
   if (network !== 'mainnet') {
-    await deployer.deploy(MockDai);
+    // await deployer.deploy(MockDai);
   }
 
   // const dai = network === 'mainnet' ? await IERC20.at(knownContracts.DAI[network]) : await MockDai.deployed();
