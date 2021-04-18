@@ -1,12 +1,8 @@
 #!/bin/bash
 
-contracts=(iBNB
-iBUSD
-CheckToken
+contracts=(CheckToken
 ForkToken
-IERC20
-IFairLaunch
-IForkFarmLaunch
+IDFO
 MockDai
 MockWBNB
 UniswapV2Factory
