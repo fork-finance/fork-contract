@@ -19,8 +19,8 @@ contract CheckToken is ERC20("Check Token", "CHECK"), Ownable {
   constructor(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public {
     require(_endReleaseBlock > _startReleaseBlock, "endReleaseBlock < startReleaseBlock");
     _setupDecimals(18);
-    // maunalMint 250k for seeding liquidity
-    mint(msg.sender, 250000e18);
+    // maunalMint 50k for seeding liquidity
+    mint(msg.sender, 50000e18);
     startReleaseBlock = _startReleaseBlock;
     endReleaseBlock = _endReleaseBlock;
   }

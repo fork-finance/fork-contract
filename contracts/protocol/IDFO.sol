@@ -51,7 +51,9 @@ contract IDFO is Ownable {
   }
 
   struct CashUserInfo {
+    uint256 total;
     uint256 amount;
+    uint256 burn;
   }
   // Info of each pool.
   CashPoolInfo[] public cashPoolInfo;
@@ -377,6 +379,9 @@ contract IDFO is Ownable {
     }
   }
 
+  function cashPoolLength() external view returns (uint256) {
+    return cashPoolInfo.length;
+  }
   // Deposit CHECK-TOKEN to CashPool for FPT allocation.
   function depositCheckToCashPool(uint256 _pid, uint256 _amount) public  {
     CashPoolInfo storage pool = cashPoolInfo[_pid];
@@ -384,6 +389,7 @@ contract IDFO is Ownable {
     require(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime, "The cash-out activity did not start");
     check.safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
+    user.total = user.total.add(_amount);
     pool.stakeTotal = pool.stakeTotal.add(_amount);
     emit DepositCheckToCashPool(msg.sender, _pid, _amount);
   }
@@ -400,9 +406,11 @@ contract IDFO is Ownable {
     check.burn(address(this), user.amount);
     cashToken.safeTransfer(address(msg.sender), pending);
     emit CashedCheck(msg.sender, _pid, user.amount, pending);
+    user.burn = user.amount;
+    user.amount = 0;
   }
 
-  function pendingClaim(address _user, uint256 _pid) public view returns(uint256)  {
+  function pendingClaim(uint256 _pid, address _user) public view returns(uint256)  {
     CashPoolInfo storage pool = cashPoolInfo[_pid];
     CashUserInfo storage user = cashUserInfo[_pid][_user];
     if (pool.stakeTotal == 0) return 0;
@@ -410,7 +418,7 @@ contract IDFO is Ownable {
     uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
     return pending;
   }
-  function mayClaim(address _user, uint256 _pid) public view returns(uint256)  {
+  function mayClaim(uint256 _pid, address _user) public view returns(uint256)  {
     CashPoolInfo storage pool = cashPoolInfo[_pid];
     CashUserInfo storage user = cashUserInfo[_pid][_user];
     if (pool.stakeTotal == 0) return 0;
