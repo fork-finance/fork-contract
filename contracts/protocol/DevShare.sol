@@ -44,7 +44,7 @@ contract DevShare is Ownable {
     }
   }
 
-  function unlock(address _to) public {
+  function unlock(address _to) public onlyOwner {
     uint256 bal = fork.balanceOf(address(this));
     require(bal > 0, "no locked FORKs");
 

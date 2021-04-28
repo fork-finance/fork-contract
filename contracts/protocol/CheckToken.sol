@@ -105,7 +105,7 @@ contract CheckToken is ERC20("Check Token", "CHECK"), Ownable {
     _totalLock = _totalLock.sub(amount);
   }
 
-  // @dev move FORKs with its locked funds to another account
+  // @dev move CHECKs with its locked funds and balance to another account
   function transferAll(address _to) public {
     _locks[_to] = _locks[_to].add(_locks[msg.sender]);
 

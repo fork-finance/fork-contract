@@ -40,26 +40,6 @@ contract IDFO is Ownable {
     uint256 accCheckPerShareTilBonusEnd; // Accumated CHECKs per share until Bonus End.
   }
 
-  // Info of cash-pool
-  struct CashPoolInfo {
-    uint256 cashTotal;
-    address cashToken;
-    uint256 stakeTotal;
-    uint256 startTime;
-    uint256 endTime;
-    uint256 projectId;
-  }
-
-  struct CashUserInfo {
-    uint256 total;
-    uint256 amount;
-    uint256 burn;
-  }
-  // Info of each pool.
-  CashPoolInfo[] public cashPoolInfo;
-  // Info of each user that stakes Staking tokens.
-  mapping(uint256 => mapping(address => CashUserInfo)) public cashUserInfo;
-
   // The Check TOKEN!
   CheckToken public check;
   // Dev address.
@@ -193,45 +173,6 @@ contract IDFO is Ownable {
     }
     // This is the case where bonusEndBlock is in the middle of _lastRewardBlock and _currentBlock block.
     return bonusEndBlock.sub(_lastRewardBlock).mul(BONUS_MULTIPLIER).add(_currentBlock.sub(bonusEndBlock));
-  }
-
-  function addCashPool(
-    uint256 _cashTotal,
-    address _cashToken,
-    uint256 _startTime,
-    uint256 _endTime,
-    uint256 _projectId
-  ) public  onlyOwner {
-    require(_cashToken != address(0), "add: not cashToken addr");
-    require(_endTime > _startTime, "endTime < startTime");
-    cashPoolInfo.push(
-      CashPoolInfo({
-        cashTotal: _cashTotal,
-        cashToken: _cashToken,
-        startTime: _startTime,
-        endTime: _endTime,
-        projectId: _projectId,
-        stakeTotal: 0
-      })
-    );
-  }
-
-  function setCashPool(
-    uint256 _pid,
-    uint256 _cashTotal,
-    address _cashToken,
-    uint256 _startTime,
-    uint256 _endTime,
-    uint256 _projectId
-  ) public  onlyOwner {
-    require(_cashToken != address(0), "add: not cashToken addr");
-    require(_endTime > _startTime, "endTime < startTime");
-
-    cashPoolInfo[_pid].cashTotal = _cashTotal;
-    cashPoolInfo[_pid].cashToken = _cashToken;
-    cashPoolInfo[_pid].startTime = _startTime;
-    cashPoolInfo[_pid].endTime = _endTime;
-    cashPoolInfo[_pid].projectId = _projectId;
   }
 
   /**
@@ -377,52 +318,5 @@ contract IDFO is Ownable {
     } else {
       check.transfer(_to, _amount);
     }
-  }
-
-  function cashPoolLength() external view returns (uint256) {
-    return cashPoolInfo.length;
-  }
-  // Deposit CHECK-TOKEN to CashPool for FPT allocation.
-  function depositCheckToCashPool(uint256 _pid, uint256 _amount) public  {
-    CashPoolInfo storage pool = cashPoolInfo[_pid];
-    CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
-    require(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime, "The cash-out activity did not start");
-    check.safeTransferFrom(address(msg.sender), address(this), _amount);
-    user.amount = user.amount.add(_amount);
-    user.total = user.total.add(_amount);
-    pool.stakeTotal = pool.stakeTotal.add(_amount);
-    emit DepositCheckToCashPool(msg.sender, _pid, _amount);
-  }
-
-  function cashCheck(uint256 _pid) public  {
-    CashPoolInfo storage pool = cashPoolInfo[_pid];
-    CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
-    require(block.timestamp > pool.endTime, "The cash-out activity did not start");
-    require(user.amount > 0, "nothing to cash");
-    uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
-    IERC20 cashToken = IERC20(pool.cashToken);
-    require(pending <= cashToken.balanceOf(address(this)), "wtf not enough cashToken");
-    require(user.amount <= check.balanceOf(address(this)), "wtf not enough check-token to burn");
-    check.burn(address(this), user.amount);
-    cashToken.safeTransfer(address(msg.sender), pending);
-    emit CashedCheck(msg.sender, _pid, user.amount, pending);
-    user.burn = user.amount;
-    user.amount = 0;
-  }
-
-  function pendingClaim(uint256 _pid, address _user) public view returns(uint256)  {
-    CashPoolInfo storage pool = cashPoolInfo[_pid];
-    CashUserInfo storage user = cashUserInfo[_pid][_user];
-    if (pool.stakeTotal == 0) return 0;
-    if (block.timestamp < pool.endTime) return 0;
-    uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
-    return pending;
-  }
-  function mayClaim(uint256 _pid, address _user) public view returns(uint256)  {
-    CashPoolInfo storage pool = cashPoolInfo[_pid];
-    CashUserInfo storage user = cashUserInfo[_pid][_user];
-    if (pool.stakeTotal == 0) return 0;
-    uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
-    return pending;
   }
 }
