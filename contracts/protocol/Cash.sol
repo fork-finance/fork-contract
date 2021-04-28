@@ -17,7 +17,7 @@ contract Cash is Ownable {
     address stakeToken;
     uint256 stakeTotal;
     uint256 stakeMax;
-    uint256 stakeMin;
+    // uint256 stakeMin;
     uint256 startTime;
     uint256 endTime;
     bool isLimit;
@@ -34,21 +34,17 @@ contract Cash is Ownable {
   // Info of each user that stakes Staking tokens.
   mapping(uint256 => mapping(address => CashUserInfo)) public cashUserInfo;
 
-  address public burnAddress = 0x000000000000000000000000000000000000dEaD;
+  address public constant burnAddress = 0x000000000000000000000000000000000000dEaD;
 
   event DepositCheckToCashPool(address indexed user, uint256 indexed pid, uint256 amount);
   event CashedCheck(address indexed user, uint256 indexed pid, uint256 amount, uint256 pending);
-
-  function setBurn(address _burn) public onlyOwner {
-    burnAddress = _burn;
-  }
 
   function addCashPool(
     uint256 _cashTotal,
     address _cashToken,
     address _stakeToken,
     uint256 _stakeMax,
-    uint256 _stakeMin,
+    // uint256 _stakeMin,
     uint256 _startTime,
     uint256 _endTime,
     bool _isLimit,
@@ -66,7 +62,7 @@ contract Cash is Ownable {
         projectId: _projectId,
         stakeTotal: 0,
         stakeMax: _stakeMax,
-        stakeMin: _stakeMin,
+        // stakeMin: _stakeMin,
         isLimit: _isLimit
       })
     );
@@ -74,23 +70,11 @@ contract Cash is Ownable {
 
   function setCashPool(
     uint256 _pid,
-    uint256 _cashTotal,
     uint256 _stakeMax,
-    uint256 _stakeMin,
-    uint256 _startTime,
-    uint256 _endTime,
-    bool _isLimit,
     uint256 _projectId
   ) public  onlyOwner {
-    require(_endTime > _startTime, "endTime < startTime");
-
-    cashPoolInfo[_pid].cashTotal = _cashTotal;
-    cashPoolInfo[_pid].startTime = _startTime;
-    cashPoolInfo[_pid].endTime = _endTime;
     cashPoolInfo[_pid].projectId = _projectId;
     cashPoolInfo[_pid].stakeMax = _stakeMax;
-    cashPoolInfo[_pid].stakeMin = _stakeMin;
-    cashPoolInfo[_pid].isLimit = _isLimit;
   }
 
   function cashPoolLength() external view returns (uint256) {
@@ -102,7 +86,7 @@ contract Cash is Ownable {
     CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
     require(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime, "The cash-out activity did not start");
     if (pool.isLimit) {
-        require(pool.stakeTotal <= pool.stakeMax, "must less than stakeMax");
+        require(pool.stakeTotal.add(_amount) <= pool.stakeMax, "must less than stakeMax");
     }
     IERC20(pool.stakeToken).safeTransferFrom(address(msg.sender), address(this), _amount);
     user.amount = user.amount.add(_amount);
@@ -116,7 +100,7 @@ contract Cash is Ownable {
     CashUserInfo storage user = cashUserInfo[_pid][msg.sender];
     require(block.timestamp > pool.endTime, "The cash-out activity did not start");
     if (pool.isLimit) {
-        require(pool.stakeTotal >= pool.stakeMin, "must more than stakeMin");
+        // require(pool.stakeTotal >= pool.stakeMin, "must more than stakeMin");
     }
     require(user.amount > 0, "nothing to cash");
     uint256 pending = pool.cashTotal.mul(user.amount).div(pool.stakeTotal);
@@ -130,7 +114,7 @@ contract Cash is Ownable {
     user.amount = 0;
     stakeToken.safeTransfer(burnAddress, amount);
     cashToken.safeTransfer(address(msg.sender), pending);
-    emit CashedCheck(msg.sender, _pid, user.amount, pending);
+    emit CashedCheck(msg.sender, _pid, amount, pending);
     
   }
 

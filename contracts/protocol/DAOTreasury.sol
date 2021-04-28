@@ -10,9 +10,6 @@ contract DAOTreasury is Ownable {
 
   string public constant name = "Fork Finance DAO Treasury";
 
-  uint256 public startReleaseBlock;
-  uint256 public endReleaseBlock;
-
   IERC20 public fork;
 
   constructor(address _fork) public {

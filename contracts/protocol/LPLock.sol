@@ -29,7 +29,7 @@ contract LPLock is Ownable {
     address _token,
     address _to,
     uint256 _amount
-  ) external onlyOwner checkLock {
+  ) public onlyOwner checkLock {
     IERC20(_token).safeTransfer(_to, _amount);
   }
 }
