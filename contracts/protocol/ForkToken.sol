@@ -12,7 +12,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
   uint256 public constant manualMintLimit = 800000e18;
   uint256 public manualMinted = 0;
 
-  constructor(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public {
+  constructor() public {
     _setupDecimals(18);
   }
 
