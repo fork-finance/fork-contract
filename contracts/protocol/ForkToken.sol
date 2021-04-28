@@ -9,34 +9,15 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
   uint256 private constant _cap = 18800000e18;
   uint256 private _totalLock;
 
-  uint256 public startReleaseBlock;
-  uint256 public endReleaseBlock;
   uint256 public constant manualMintLimit = 800000e18;
   uint256 public manualMinted = 0;
 
   constructor(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public {
-    require(_endReleaseBlock > _startReleaseBlock, "endReleaseBlock < startReleaseBlock");
     _setupDecimals(18);
-    startReleaseBlock = _startReleaseBlock;
-    endReleaseBlock = _endReleaseBlock;
-  }
-
-  function setReleaseBlock(uint256 _startReleaseBlock, uint256 _endReleaseBlock) public onlyOwner {
-    require(_endReleaseBlock > _startReleaseBlock, "endReleaseBlock < startReleaseBlock");
-    startReleaseBlock = _startReleaseBlock;
-    endReleaseBlock = _endReleaseBlock;
   }
 
   function cap() public view returns (uint256) {
     return _cap;
-  }
-
-  function unlockedSupply() public view returns (uint256) {
-    return totalSupply().sub(totalLock());
-  }
-
-  function totalLock() public view returns (uint256) {
-    return _totalLock;
   }
 
   function manualMint(address _to, uint256 _amount) public onlyOwner {
