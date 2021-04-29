@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-// ForkLaunch is a smart contract for distributing CHECK by asking user to stake the FORK token.
 contract Cash is Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
@@ -66,15 +65,6 @@ contract Cash is Ownable {
         isLimit: _isLimit
       })
     );
-  }
-
-  function setCashPool(
-    uint256 _pid,
-    uint256 _stakeMax,
-    uint256 _projectId
-  ) public  onlyOwner {
-    cashPoolInfo[_pid].projectId = _projectId;
-    cashPoolInfo[_pid].stakeMax = _stakeMax;
   }
 
   function cashPoolLength() external view returns (uint256) {
