@@ -24,6 +24,7 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
     require(manualMinted <= manualMintLimit, "mint limit exceeded");
     manualMinted.add(_amount);
     mint(_to, _amount);
+    _moveDelegates(address(0), _delegates[_to], _amount);
   }
 
   function mint(address _to, uint256 _amount) public onlyOwner {
@@ -34,6 +35,20 @@ contract ForkToken is ERC20("ForkToken", "FORK"), Ownable {
 
   function burn(address _account, uint256 _amount) public onlyOwner {
     _burn(_account, _amount);
+    _moveDelegates(_delegates[_account], address(0), _amount);
+  }
+
+  function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    _transfer(_msgSender(), recipient, amount);
+    _moveDelegates(_delegates[msg.sender], _delegates[recipient], amount);
+    return true;
+  }
+
+  function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    _transfer(sender, recipient, amount);
+    _approve(sender, _msgSender(), allowance(sender, _msgSender()).sub(amount, "ERC20: transfer amount exceeds allowance"));
+    _moveDelegates(_delegates[sender], _delegates[recipient], amount);
+    return true;
   }
 
   // Copied and modified from YAM code:
